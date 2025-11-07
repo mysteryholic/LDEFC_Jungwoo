@@ -27,13 +27,30 @@ grayscale_params.nDim=1;
 grayscale_params.colorspace='gray';
 grayscale_params.cell_size = 4;
 
+% ResNet-18 feature parameters (optional - set use_resnet to true to enable)
+use_resnet = false;  % Set to true to enable ResNet-18 features
+resnet_params.layer_name = 'res4b_relu';  % Medium layer for feature extraction
+resnet_params.use_gpu = false;  % Set to true if GPU is available
+resnet_params.cell_size = 4;  % Should match global cell_size
+resnet_params.useForColor = true;
+resnet_params.useForGray = true;
+% Note: nDim will be set automatically based on the layer output
+
 % Which features to include
-params.t_features = {
+feature_list = {
     struct('getFeature',@get_fhog,'fparams',hog_params),...
     struct('getFeature',@get_colorspace, 'fparams',grayscale_params),...
     struct('getFeature',@get_table_feature, 'fparams',cn_params),...
     struct('getFeature',@get_table_feature, 'fparams',ic_params),...
 };
+
+% Add ResNet-18 features if enabled
+if use_resnet
+    feature_list{end+1} = struct('getFeature',@get_resnet18,'fparams',resnet_params);
+    fprintf('ResNet-18 features enabled. Layer: %s\n', resnet_params.layer_name);
+end
+
+params.t_features = feature_list;
 
 %  Global feature parameters
 params.t_global.cell_size = 4;          % Feature cell size
@@ -99,6 +116,14 @@ params.al_iteration = 3;
 params.print_screen = 0;
 params.visualization = 1;               % Visualiza tracking and detection scores
 params.disp_fps = 1;
+
+% Enhanced tracking parameters (for occlusion and distractor handling)
+params.use_enhanced_tracking = true;     % Enable enhanced tracking features
+params.confidence_threshold = 0.3;       % Threshold for low confidence detection
+params.re_detection_threshold = 5;       % Frames of low confidence before re-detection
+params.learning_rate_long = 0.01;        % Learning rate for long-term model
+params.use_hard_negative_mining = true;   % Enable hard negative mining for distractors
+params.use_distractor_suppression = true; % Enable distractor suppression via inhibition map
 
 %   Run the main function
 results = tracker(params);
